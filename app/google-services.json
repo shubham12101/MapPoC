@@ -1,0 +1,35 @@
+{
+  "project_info": {
+    "project_number": "903651080569",
+    "project_id": "starry-polymer-134313"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:903651080569:android:96b3d2e44380bbfa",
+        "android_client_info": {
+          "package_name": "com.example.shubhamsingh.cabsmaplocation"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhsRSQR1qGZGZp1Q_1li0DFhLf4DqZOxc"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 1
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

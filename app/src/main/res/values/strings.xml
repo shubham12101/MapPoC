@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">CabsMapLocation</string>
+    <string name="title_activity_cab_location">Cab Location</string>
+    <string name="button_start_ride">Start Ride</string>
+    <string name="roads_api_key">AIzaSyBhsRSQR1qGZGZp1Q_1li0DFhLf4DqZOxc</string>
+</resources>

@@ -16,7 +16,6 @@ import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -26,7 +25,6 @@ import android.util.Log;
 import android.util.Property;
 import android.view.View;
 import android.view.WindowManager;
-import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.Toast;
@@ -170,7 +168,7 @@ public class CabLocationActivity extends FragmentActivity implements OnMapReadyC
     protected void onStart() {
         googleApiClient.connect();
         isRequestingUpdates = true;
-        if (cabMarker == null && currAnimationObject != null){
+        if ((cabMarker == null || !cabMarker.isVisible()) && currAnimationObject != null){
             cabMarker = mMap.addMarker(cabMarkerOptions.position(currAnimationObject.getLatLng()));
         }
         Log.d(TAG, "googleApiClient.connect() called");
@@ -350,34 +348,6 @@ public class CabLocationActivity extends FragmentActivity implements OnMapReadyC
                 getLongitude(), Toast.LENGTH_SHORT).show();
     }
 
-//    /**
-//     * @param rideId
-//     * @param timeInterval in milliseconds
-//     */
-//    private void getCabLocationRequest(final String rideId, final int timeInterval) {
-//        requestHandler = new Handler();
-//        requestRunnable = new Runnable() {
-//            @Override
-//            public void run() {
-//                try {
-//                    String requestURL = Constants.CAB_LOCATION_URL + rideId;
-//                    GetRequest<CabLocationObject> getCabLocationRequest = new GetRequest<>(
-//                            CabLocationActivity.context, CabLocationActivity.this, requestURL,
-//                            CabLocationObject.class);
-//                    Log.d(TAG, "Request Url:" + requestURL);
-//                    if (getCabLocationRequest.getStatus() == AsyncTask.Status.RUNNING)
-//                        getCabLocationRequest.cancel(true);
-//                    getCabLocationRequest.execute();
-//                    Log.d(TAG, "Executing getCabLocationRequest");
-//                    requestHandler.postDelayed(requestRunnable, timeInterval);
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        };
-//        requestRunnable.run();
-//    }
-
     /**
      * @param rideId
      * @param timeInterval in milliseconds
@@ -437,10 +407,10 @@ public class CabLocationActivity extends FragmentActivity implements OnMapReadyC
                     if (isFirstCabLocation) {
                         isFirstCabLocation = false;
                         cabPrevLatLng = cabLatLng;
-                        updateMap(null, cabLatLng, mapCameraUpdateNeeded);
+                        updateMap(cabLatLng, mapCameraUpdateNeeded);
                     } else if (cabPrevLatLng != null) {
                         mapCameraUpdateNeeded = false;
-                        updateMap(cabPrevLatLng, cabLatLng, mapCameraUpdateNeeded);
+                        updateMap(cabLatLng, mapCameraUpdateNeeded);
                         cabPrevLatLng = cabLatLng;
                     }
 
@@ -534,7 +504,6 @@ public class CabLocationActivity extends FragmentActivity implements OnMapReadyC
                 Log.d(TAG, "Calling rotateMarker, distance: "+startLoc.distanceTo(toLocation)+", " +
                         "rotation: "+startLoc.bearingTo(toLocation));
                 rotateMarker(marker, toLatLng, duration);
-//                rotateMarker2(marker, toLatLng, duration);
             }
         }
         else {
@@ -542,84 +511,27 @@ public class CabLocationActivity extends FragmentActivity implements OnMapReadyC
         }
     }
 
-    private void animateMarker(final LatLng fromPosition, final LatLng toPosition,
-                               final long duration) {
-        animationHandler = new Handler();
-        final long start = SystemClock.uptimeMillis();
-        animationTimeElapsed = duration;
-        final Interpolator interpolator = new LinearInterpolator();
-
-        Location prevLoc = new Location("Cab Last Location");
-        prevLoc.setLatitude(fromPosition.latitude);
-        prevLoc.setLongitude(fromPosition.longitude);
-        Location newLoc = new Location("Cab New Location");
-        newLoc.setLatitude(toPosition.latitude);
-        newLoc.setLongitude(toPosition.longitude);
-        float bearing = prevLoc.bearingTo(newLoc);
-
-        cabMarker.setRotation(bearing);
-
-        animationHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                long elapsed = SystemClock.uptimeMillis() - start;
-                float t = interpolator.getInterpolation((float) elapsed
-                        / duration);
-                intermediateLat = t * toPosition.latitude + (1 - t)
-                        * fromPosition.latitude;
-                intermediateLng = t * toPosition.longitude + (1 - t)
-                        * fromPosition.longitude;
-
-                cabMarker.setPosition(new LatLng(intermediateLat, intermediateLng));
-
-                if (t < 1.0) {
-                    // Post again 16ms later.
-                    animationTimeElapsed -= 16;
-//                    Log.wtf(TAG, "animationTimeElapsed= "+animationTimeElapsed+", duration= "+duration+", t= "+t);
-                    animationHandler.postDelayed(this, 16);
-                }
-//                else if (animationLatLngCtr < animationLatLngs.size()-1){
-//                    animateMarker(animationLatLngs.get(animationLatLngCtr),
-//                            animationLatLngs.get(animationLatLngCtr+1),
-//                            (locationUpdateTimeElapsed/animationLatLngs.size()-1));
-//                    animationLatLngCtr++;
-//                }
-                else{
-                    animationTimeElapsed = 0;
-                    intermediateLat = 0;
-                    intermediateLng = 0;
-                }
-            }
-        });
-    }
-
-
-    protected void updateMap(LatLng prevLatLng, LatLng currLatLng, boolean forceUpdate){
-        updateMap(prevLatLng, currLatLng, forceUpdate, 5000);
-    }
-
-    protected void updateMap(LatLng prevLatLng, LatLng currLatLng, boolean forceUpdate,
-                             long animationDuration) {
-        if (cabMarker == null) {
+    protected void updateMap(LatLng currLatLng, boolean forceUpdate) {
+        if (cabMarker == null || !cabMarker.isVisible()) {
             cabMarker = mMap.addMarker(cabMarkerOptions.position(currLatLng));
             Log.d(TAG, "Marker not found");
         }
-        else if (prevLatLng != null) {
-            Log.d(TAG, "marker position: "+cabMarker.getPosition()+"; isMarkerVisible: "+cabMarker
-                    .isVisible());
-//            animateMarker(cabMarker, currLatLng, false, animationDuration);
-            if( animationTimeElapsed>0){
-                animationDuration =+ animationTimeElapsed;
-                Log.d(TAG, "if: animationTimeElapsed: "+animationTimeElapsed);
-                animationHandler.removeCallbacksAndMessages(null);
-                animateMarker(new LatLng(intermediateLat, intermediateLng), currLatLng,
-                        animationDuration);
-            }
-            else {
-                Log.d(TAG, "else: animationTimeElapsed: "+animationTimeElapsed);
-                animateMarker(prevLatLng, currLatLng, animationDuration);
-            }
-        }
+
+//        else if (prevLatLng != null) {
+//            Log.d(TAG, "marker position: "+cabMarker.getPosition()+"; isMarkerVisible: "+cabMarker
+//                    .isVisible());
+//            if( animationTimeElapsed>0){
+//                animationDuration =+ animationTimeElapsed;
+//                Log.d(TAG, "if: animationTimeElapsed: "+animationTimeElapsed);
+//                animationHandler.removeCallbacksAndMessages(null);
+//                animateMarker(new LatLng(intermediateLat, intermediateLng), currLatLng,
+//                        animationDuration);
+//            }
+//            else {
+//                Log.d(TAG, "else: animationTimeElapsed: "+animationTimeElapsed);
+//                animateMarker(prevLatLng, currLatLng, animationDuration);
+//            }
+//        }
 
         if (forceUpdate) {
             latLngBuilder.include(currLatLng);
@@ -632,109 +544,6 @@ public class CabLocationActivity extends FragmentActivity implements OnMapReadyC
         }
         Log.d(TAG, "udpateMap() called");
     }
-
-    private void newUpdateMap(boolean forceUpdate){
-        if (cabMarker == null) {
-            cabMarker = mMap.addMarker(cabMarkerOptions.position(cabPrevLatLng));
-            Log.d(TAG, "Marker not found");
-        }
-        else if (cabPrevLatLng != null) {
-            Log.d(TAG, "marker position: "+cabMarker.getPosition()+"; isMarkerVisible: "+cabMarker
-                    .isVisible());
-//            animateMarker(cabMarker, currLatLng, false, animationDuration);
-            if(lastAnimationDuration>0){
-                animationObjectsQueue.peek().setDuration((lastAnimationDuration+ animationObjectsQueue.peek()
-                        .getDuration()));
-                Log.d(TAG, "if: animationTimeElapsed: "+lastAnimationDuration);
-                animationHandler.removeCallbacksAndMessages(null);
-                newAnimateMarker(cabMarker);
-            }
-            else {
-                Log.d(TAG, "else: animationTimeElapsed: "+animationTimeElapsed);
-                newAnimateMarker(cabMarker);
-            }
-        }
-
-        if (forceUpdate) {
-            latLngBuilder.include(cabCurrLatLng);
-            LatLngBounds bounds = latLngBuilder.build();
-
-            int padding = 200; // offset from edges of the map in pixels
-            CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, padding);
-
-            mMap.animateCamera(cu);
-        }
-    }
-
-    private static void newerAnimateMarker(final Marker marker,
-                                           final AnimationObject fromAnimationObject,
-                                           final AnimationObject toAnimationObject) {
-
-        final long duration = fromAnimationObject.getDuration();
-        Log.d(TAG, "newerAnimateMarker() called, duration: "+duration);
-        final Handler handler = new Handler();
-        final long start = SystemClock.uptimeMillis();
-
-        final Interpolator interpolator = new LinearInterpolator();
-
-        handler.post(new Runnable() {
-
-            @Override
-            public void run() {
-                long elapsed = SystemClock.uptimeMillis() - start;
-                float t = interpolator.getInterpolation((float) elapsed
-                        / duration);
-
-                double intermediateLat = t * toAnimationObject.getLatLng().latitude + (1 - t)
-                        * fromAnimationObject.getLatLng().latitude;
-                double intermediateLng = t * toAnimationObject.getLatLng().longitude + (1 - t)
-                        * fromAnimationObject.getLatLng().longitude;
-
-                marker.setPosition(new LatLng(intermediateLat, intermediateLng));
-
-                if (t < 1.0) {
-                    // Post again 16ms later.
-                    handler.postDelayed(this, 16);
-                }
-                else {
-                    //Animation completed; poll next data value
-
-                }
-
-            }
-        });
-    }
-
-    static public void rotateMarker2(final Marker marker, final LatLng toLatLng,
-                                    final long duration) {
-        final Handler handler = new Handler();
-        final long start = SystemClock.uptimeMillis();
-        final float startRotation = marker.getRotation();
-        final float toRotation = getLocationFromLatLng(toLatLng).getBearing();
-        Log.d(TAG, "toRotation: "+toRotation);
-
-        final Interpolator interpolator = new LinearInterpolator();
-
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                long elapsed = SystemClock.uptimeMillis() - start;
-                float t = interpolator.getInterpolation((float) elapsed / 5000);
-
-                float rot = t * toRotation + (1 -t) * startRotation;
-
-                marker.setRotation(-rot > 180 ? rot/2 : rot);
-                if (t < 1.0) {
-                    // Post again 16ms later.
-                    handler.postDelayed(this, 16);
-                }
-                else {
-                    moveMarker(cabMarker, toLatLng, new LatLngInterpolator.LinearFixed(), duration);
-                }
-            }
-        });
-    }
-
 
     private static void rotateMarker(final Marker marker, final LatLng toLatLng,
                                      final long duration) {
@@ -839,52 +648,6 @@ public class CabLocationActivity extends FragmentActivity implements OnMapReadyC
 
     }
 
-    /**
-     * Method to animate marker to destination location
-     * @param destination destination location (must contain bearing attribute, to ensure
-     *                    marker rotation will work correctly)
-     * @param marker marker to be animated
-     */
-    public static void animateMarker2(final Location destination, final Marker marker, long duration) {
-        Log.d(TAG, "animateMarker2 called");
-        if (marker != null) {
-            final LatLng startPosition = marker.getPosition();
-            final LatLng endPosition = new LatLng(destination.getLatitude(), destination.getLongitude());
-
-            final float startRotation = marker.getRotation();
-
-            final LatLngInterpolator latLngInterpolator = new LatLngInterpolator.LinearFixed();
-            ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1);
-            valueAnimator.setDuration(duration); // duration 1 second
-            valueAnimator.setInterpolator(new LinearInterpolator());
-            valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                @Override public void onAnimationUpdate(ValueAnimator animation) {
-                    try {
-                        float v = animation.getAnimatedFraction();
-                        LatLng newPosition = latLngInterpolator.interpolate(v, startPosition, endPosition);
-                        marker.setPosition(newPosition);
-//                        marker.setRotation(computeRotation(v, startRotation, destination.getBearing()));
-                        marker.setRotation(getLocationFromLatLng(startPosition).bearingTo(destination));
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                }
-            });
-            valueAnimator.addListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    Log.d(TAG,  "animation ended");
-                    if(!animationObjectsQueue.isEmpty()){
-                        AnimationObject animationObject = animationObjectsQueue.poll();
-                        animateMarker2(getLocationFromLatLng(animationObject.getLatLng()), cabMarker,
-                                animationObject.getDuration());
-                    }
-                }
-            });
-            valueAnimator.start();
-        }
-    }
-
     private static float computeRotation(float fraction, float start, float end) {
         float normalizeEnd = end - start; // rotate start to 0
         float normalizedEndAbs = (normalizeEnd + 360) % 360;
@@ -901,70 +664,6 @@ public class CabLocationActivity extends FragmentActivity implements OnMapReadyC
         return (result + 360) % 360;
     }
 
-    private void newAnimateMarker(final Marker marker) {
-        Log.d(TAG, "newAnimateMarker called");
-        for (AnimationObject animObj: animationObjectsQueue) {
-            Log.d(TAG, animObj.toString());
-        }
-        animationHandler = new Handler();
-        final long start = SystemClock.uptimeMillis();
-        final AnimationObject fromAnimationObject = animationObjectsQueue.poll();
-        final AnimationObject toAnimationObject = animationObjectsQueue.peek();
-
-        final long duration = toAnimationObject.getDuration();
-
-        lastAnimationDuration = duration;
-
-        final Interpolator interpolator = new LinearInterpolator();
-
-        Location prevLoc = new Location("Cab Last Location");
-        prevLoc.setLatitude(toAnimationObject.getLatLng().latitude);
-        prevLoc.setLongitude(fromAnimationObject.getLatLng().longitude);
-        Location newLoc = new Location("Cab New Location");
-        newLoc.setLatitude(toAnimationObject.getLatLng().latitude);
-        newLoc.setLongitude(toAnimationObject.getLatLng().longitude);
-        float bearing = prevLoc.bearingTo(newLoc);
-        marker.setRotation(bearing);
-        float distance = prevLoc.distanceTo(newLoc);
-
-        Log.d(TAG, "Distance: "+distance);
-
-        if (distance < 20){
-            newAnimateMarker(cabMarker);
-        }
-
-        animationHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                long elapsed = SystemClock.uptimeMillis() - start;
-                float t = interpolator.getInterpolation((float) elapsed
-                        / duration);
-                intermediateLat = t * toAnimationObject.getLatLng().latitude + (1 - t)
-                        * fromAnimationObject.getLatLng().latitude;
-                intermediateLng = t * toAnimationObject.getLatLng().longitude + (1 - t)
-                        * fromAnimationObject.getLatLng().longitude;
-
-
-                marker.setPosition(new LatLng(intermediateLat, intermediateLng));
-
-
-                if (t < 1.0) {
-                    // Post again 16ms later.
-                    lastAnimationDuration -= 16;
-//                    Log.wtf(TAG, "animationTimeElapsed= "+animationTimeElapsed+", duration= "+duration+", t= "+t);
-                    animationHandler.postDelayed(this, 16);
-                }
-                else if (animationObjectsQueue.size()>1){
-                    lastAnimationDuration = 0;
-                    intermediateLat = 0;
-                    intermediateLng = 0;
-                    newAnimateMarker(cabMarker);
-                }
-
-            }
-        });
-    }
-
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -979,7 +678,7 @@ public class CabLocationActivity extends FragmentActivity implements OnMapReadyC
                 initialLocationReceived = true;
                 prevLocationUpdateTime = System.currentTimeMillis();
                 cabPrevLatLng = new LatLng(location.getLatitude(), location.getLongitude());
-                updateMap(null, cabPrevLatLng, mapCameraUpdateNeeded, 0);
+                updateMap(cabPrevLatLng, mapCameraUpdateNeeded);
             }
             else {
                 LatLngProducer latLngProducer = new LatLngProducer(latLngDataQueue, location);
@@ -995,7 +694,6 @@ public class CabLocationActivity extends FragmentActivity implements OnMapReadyC
 
 //                locationUpdateTimeElapsed = System.currentTimeMillis() - prevLocationUpdateTime;
 //                prevLocationUpdateTime = System.currentTimeMillis();
-
 
 //                cabPrevLatLng = cabCurrLatLng;
             }

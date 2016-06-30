@@ -170,6 +170,9 @@ public class CabLocationActivity extends FragmentActivity implements OnMapReadyC
     protected void onStart() {
         googleApiClient.connect();
         isRequestingUpdates = true;
+        if (cabMarker == null && currAnimationObject != null){
+            cabMarker = mMap.addMarker(cabMarkerOptions.position(currAnimationObject.getLatLng()));
+        }
         Log.d(TAG, "googleApiClient.connect() called");
         super.onStart();
     }
@@ -1037,8 +1040,7 @@ public class CabLocationActivity extends FragmentActivity implements OnMapReadyC
             Log.d(TAG, "distance between points greater than 500m");
             locationUpdateTimeElapsed = System.currentTimeMillis() - prevLocationUpdateTime;
             prevLocationUpdateTime = System.currentTimeMillis();
-            moveMarker(cabMarker, latLng, new LatLngInterpolator.LinearFixed(),
-                    locationUpdateTimeElapsed);
+            animateMakerNew(cabMarker, latLng, locationUpdateTimeElapsed);
         }
     }
 

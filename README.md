@@ -12,7 +12,7 @@ Location data (LatLng values) are pushed to the device using GCM downstream mess
  -  Make request to Snap to Roads API
   - Calculate distance between each latlng received from the API
   - Animate them as per the distance to the time elapsed ratio
-  - Rotation animation takes place first for 300 ms, if distance is less than 50 m
+  - Rotation animation takes place first for 300 ms, if distance is less than 25 m
   - Movement animation takes place next for duration - 300 ms
   - This is repeated for each location returned by API
 - Else if distance between two positions is greater than 500m:

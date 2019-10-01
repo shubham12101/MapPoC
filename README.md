@@ -2,11 +2,11 @@
 
 This repository contains code for Android application to move a cab marker on Google Maps Activity.
 
-###Pushing Data
+### Pushing Data
 
 Location data (LatLng values) are pushed to the device using GCM downstream messages.
 
-###Constraints
+### Constraints
 - Animate marker for the time that has elapsed from the last request
 - If distance between two positions is less than 500m:
  -  Make request to Snap to Roads API
